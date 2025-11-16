@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Homepage</title>
+    
+{% endblock %}
+
+{% block body %}
+    
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="nav-left">
+        <img src="{{ url_for('static', filename='assets/Logo_Full.png') }}" class="logo">
+        <span class="brand">HireLytic</span>
+        <hr>
+    </div>
+
+    <div class="nav-right">
+        <a href="#">About Us</a>
+        <a href="#">Pricing</a>
+        <a href="#" class="login">Log in</a>
+        <button class="btn primary-btn">Get started</button>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-text">
+        <h1>Streamline Your Hiring,<br> Empower Fair Decisions<br> with
+            <span class="highlight">HireLytic</span>
+        </h1>
+
+        <p class="hero-desc">
+            Harness the power of AI and NLP to analyze resumes,
+            evaluate skills, and identify top candidates—saving time
+            and promoting fairness in recruitment.
+        </p>
+
+        <button class="btn upload-btn">Upload resume</button>
+
+        <p class="mini-tagline">
+            Start hiring smarter today.<br>
+            Hire with intelligence, decide with confidence.
+        </p>
+    </div>
+
+    <div class="hero-img">
+        <img src="{{ url_for('static', filename='assets/hero-graphic.png') }}">
+    </div>
+</section>
+
+<!-- INTELLIGENT AUTOMATION -->
+<section class="automation">
+    <h2>Transform recruitment through<br><span class="underline">Intelligent Automation</span></h2>
+
+    <p class="automation-desc">
+        Hirelytic revolutionizes the hiring process by combining Artificial Intelligence (AI)
+        and Natural Language Processing (NLP). HR managers can now access instant compatibility
+        scores, skill breakdowns, and analytics dashboards — all in one streamlined platform.
+    </p>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+    <h2>What makes Hirelytic Different</h2>
+
+    <div class="feature-grid">
+
+        <div class="feature-box">
+            <img src="{{ url_for('static', filename='icons/ai.png') }}" class="icon">
+            <h3>AI-Powered Resume Analysis</h3>
+            <p>Extract, interpret, and score candidates using NLP algorithms.</p>
+        </div>
+
+        <div class="feature-box">
+            <img src="{{ url_for('static', filename='icons/ranking.png') }}" class="icon">
+            <h3>Objective Candidate Ranking</h3>
+            <p>Eliminate bias with data-driven scoring tailored to job requirements.</p>
+        </div>
+
+        <div class="feature-box">
+            <img src="{{ url_for('static', filename='icons/dashboard.png') }}" class="icon">
+            <h3>Analytics Dashboard</h3>
+            <p>Visualize hiring trends and make smarter decisions.</p>
+        </div>
+
+        <div class="feature-box">
+            <img src="{{ url_for('static', filename='icons/security.png') }}" class="icon">
+            <h3>Secure and Reliable</h3>
+            <p>Enterprise-level security protects sensitive candidate information.</p>
+        </div>
+
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <button class="btn footer-btn">Get started</button>
+    <a href="#" class="footer-login">Log in</a>
+    <p>Copyright © 2025 Hirelytic. All rights reserved.</p>
+</footer>
+
+{% endblock %}
