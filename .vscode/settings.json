@@ -6,6 +6,9 @@
     "loginform",
     "mysqldb",
     "signinform",
-    "Skibidi"
+    "Skibidi",
+    "Swal",
+    "topbar",
+    "uploadlabel"
   ]
 }

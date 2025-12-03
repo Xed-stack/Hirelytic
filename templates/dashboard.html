@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>User Dashboard</title>
+{% endblock %}
+
+{% block body %}
+    <div class="dashboard-container">
+        <h1>Welcome to Your Dashboard, {{ username }}!</h1>
+        <p>Here you can manage your account, upload resumes, and view analysis results.</p>
+
+        <div class="dashboard-actions">
+            <a href="/upload_form" class="button">Upload Resumes</a>
+            <a href="/results" class="button">View Analysis Results</a>
+            <a href="/signout" class="button">Sign Out</a>
+        </div>
+    </div>
+{% endblock %}

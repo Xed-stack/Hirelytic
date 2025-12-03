@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Hirelytic-Upload Resumes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.3/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/Upload.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.3/dist/sweetalert2.all.min.js"></script>
+{% endblock %}
+
+
+{% block body %}
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="nav-left" >
+        <img src="{{ url_for('static', filename='assets/Logo_Full.png') }}" class="logo logo-img">
+        <a  href="{{ url_for('home') }}" class="link-primary link-underline-opacity-0 font-size-20"><span >HireLytic</span></a>
+        <a href="{{ url_for('home') }}" class="btn">Home</a>
+        <hr>
+    </div>
+
+
+    <div class="nav-right">
+        <img src="{{ url_for('static', filename='assets/profile.jpg') }}" class="logo-profile ">
+        <a href="#" class="link-dark link-underline-opacity-0">{{ username }}</a>
+    </div>
+</nav>
+
+
+
+<div class="mainContainer">
+
+    <!-- wrapper -->
+    <div class="left-wrapper">
+
+        <div class="header">
+            <h1 class="upload-area-title">Upload File for Analysis</h1>
+            <pre>Upload one or multiple PDF resumes to begin 
+the AI-powered evaluation.Supported formats: 
+.pdf
+            </pre>
+        </div>
+    
+        <!-- Upload Box container -->
+        <div class="box" id="box">
+            <!-- <div class="input-bx">
+            </div>  -->
+                <!-- Upload Form -->
+                <form action="{{ url_for('analyze') }}" id="analyzeForm" method="POST" enctype="multipart/form-data">
+                    
+                    <input type="file" id="upload" name="resumes" accept=".pdf" hidden webkitdirectory multiple>
+                    <label for="upload" class="uploadlabel">
+                        <span><i class="fa fa-cloud-upload"></i></span>
+                        <p>Click or drag files here</p>
+                        <small>Max file size: 5MB</small>
+                    </label>
+                
+                    <div class="filewrapper" id="filewrapper">
+                        <h3 class="uploaded">Uploaded Files:</h3>
+                        <!-- <div class="showfilebox">
+                            <div class="left">
+                                <span class="filetype">PDF</span>
+                                <h3>Placeholder.pdf</h3>
+                            </div>
+
+                            <div class="right">
+                                <span>&#215;</span>
+                            </div>
+                        </div> -->
+                    </div>
+
+                    <div class="btn_analyze">
+                            <a href="#" >Analyze Now</a>
+                        </div>
+                    </div>
+                </form>
+        <!-- End upload box container  -->
+        
+    </div>
+
+        <div class="right-wrapper">
+
+        <h2 class="panel-title">Job Requirements</h2>
+
+        <!-- Job Title -->
+        <label class="hr-label">Job Position / Title</label>
+        <input type="text" class="hr-input" placeholder="e.g., Data Analyst">
+
+        <!-- Job Description -->
+        <label class="hr-label">Job Description</label>
+        <textarea class="hr-textarea" placeholder="Brief description of the role"></textarea>
+
+        <!-- Required Skills -->
+        <label class="hr-label">Required Skills</label>
+        <input type="text" class="hr-input" placeholder="Type a skill separated by commas">
+
+        <!-- Education -->
+        <label class="hr-label">Required Education Level</label>
+        <select class="hr-select">
+            <option>Bachelor's Degree</option>
+            <option>Master's Degree</option>
+            <option>PhD</option>
+            <option>Associate Degree</option>
+            <option>High School Graduate</option>
+        </select>
+
+        <!-- Experience -->
+        <label class="hr-label">Minimum Years of Experience</label>
+        <input type="number" class="hr-input" placeholder="e.g., 2" min="0">
+
+        <!-- Preferred Certifications -->
+        <label class="hr-label">Preferred Certifications</label>
+        <input type="text" class="hr-input" placeholder="Type a certification and press Enter">
+
+        <!-- Required Tools -->
+        <label class="hr-label">Required Tools / Technologies</label>
+        <input type="text" class="hr-input" placeholder="e.g., Excel, PowerBI">
+    </div>
+
+</div>
+<!-- ^^^ End Main Container ^^^ -->
+
+
+<!-- SCRIPTS -->
+<script src="{{ url_for('static', filename='scripts/script.js') }}"></script>
+
+<script>
+    $(document).ready(function(){
+        Swal.fire({
+            title: "Upload files?",
+            ShowDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'Upload',
+            denyButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed){
+                Swal.fire('Uploaded!', '', 'success');
+            } else if (result.isDenied){
+                Swal.fire('Upload Cancelled', '', 'info');
+            }
+        });
+    })
+</script>
+{% endblock %}

@@ -13,6 +13,10 @@ app.config['MYSQL_DB'] = 'hirelytic'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
+
+app.config['DROPZONE_ALLOWED_FILE_TYPE'] = 'document'
+app.config['DROPZONE_MAX_FILE_SIZE'] = 10
+
 # --------------------------------------------------------------
 
 # ---------------------- ROUTES ----------------------
@@ -53,14 +57,14 @@ def signin():
         cur.close()
 
         session['username'] = username
-        return render_template('Result.html', username=username)
+        return render_template('dashboard.html', username=username)
 
     else:
         username = session.get('username')
         if username:
-            return render_template('Result.html', username=username)
+            return render_template('dashboard.html', username=username)
 
-    return render_template('Result.html')
+    return render_template('dashboard.html')
 
 
 @app.route('/signout')
@@ -93,14 +97,39 @@ def login():
 
         if user and check_password_hash(user['passwordHash'], password):
             session['username'] = user['userName']
-            return render_template('Result.html', username=user['userName'])
+            return redirect(url_for('dashboard'))
         else:
             # Pass error message and entered identifier back to template
-            return render_template('Login.html', error="Invalid username/email or password",
-                                   identifier=identifier)
+            return render_template('Login.html', error="Invalid username/email or password", identifier=identifier)
 
     # GET request
     return render_template('Login.html')
+
+
+@app.route('/dashboard')
+def dashboard():
+    username = session.get('username')
+    if username:
+        return render_template('dashboard.html', username=username)
+    else:
+        print(f"User not found")
+        return redirect(url_for('loginform'))
+
+
+@app.route('/upload_form')
+def upload_form():
+    username = session.get('username')
+    return render_template('upload.html', username=username)
+
+
+@app.route('/upload', methods=['POST', 'GET'])
+def upload():
+    pass
+
+
+@app.route('/analyze', methods=['POST', 'GET'])
+def analyze():
+    pass
 
 
 # ----------------------- END ROUTES ----------------------

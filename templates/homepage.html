@@ -36,7 +36,7 @@
             and promoting fairness in recruitment.
         </p>
 
-        <button class="btn upload-btn">Upload resume</button>
+        <a href="{{ url_for('upload_form')}}" class="btn primary-btn">Upload resume</a>
 
         <p class="mini-tagline">
             Start hiring smarter today.<br>
@@ -67,25 +67,25 @@
     <div class="feature-grid">
 
         <div class="feature-box">
-            <img src="{{ url_for('static', filename='icons/ai.png') }}" class="icon">
+            <img src="{{ url_for('static', filename='') }}" class="icon">
             <h3>AI-Powered Resume Analysis</h3>
             <p>Extract, interpret, and score candidates using NLP algorithms.</p>
         </div>
 
         <div class="feature-box">
-            <img src="{{ url_for('static', filename='icons/ranking.png') }}" class="icon">
+            <img src="{{ url_for('static', filename='') }}" class="icon">
             <h3>Objective Candidate Ranking</h3>
             <p>Eliminate bias with data-driven scoring tailored to job requirements.</p>
         </div>
 
         <div class="feature-box">
-            <img src="{{ url_for('static', filename='icons/dashboard.png') }}" class="icon">
+            <img src="{{ url_for('static', filename='') }}" class="icon">
             <h3>Analytics Dashboard</h3>
             <p>Visualize hiring trends and make smarter decisions.</p>
         </div>
 
         <div class="feature-box">
-            <img src="{{ url_for('static', filename='icons/security.png') }}" class="icon">
+            <img src="{{ url_for('static', filename='') }}" class="icon">
             <h3>Secure and Reliable</h3>
             <p>Enterprise-level security protects sensitive candidate information.</p>
         </div>
@@ -95,8 +95,8 @@
 
 <!-- FOOTER -->
 <footer>
-    <button class="btn footer-btn">Get started</button>
-    <a href="#" class="footer-login">Log in</a>
+    <a href="{{ url_for('signinform')}}" class="btn primary-btn">Get started</a>
+    <a href="{{ url_for('loginform')}}" class="footer-login">Log in</a>
     <p>Copyright © 2025 Hirelytic. All rights reserved.</p>
 </footer>
 
