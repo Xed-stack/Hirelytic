@@ -1,7 +1,19 @@
+# from flask_mysqldb import MySQL
+# from flask import Flask, render_template, request, redirect, url_for, session
+# from werkzeug.security import generate_password_hash, check_password_hash
+
+import os
+import json
+import PyPDF2
+import google.generativeai as genai
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_mysqldb import MySQL
-from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.utils import secure_filename
+from datetime import datetime
+from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
+load_dotenv()
 app = Flask(__name__)
 app.secret_key = "Ambatukam_secret_key"
 
@@ -14,11 +26,25 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 
-app.config['DROPZONE_ALLOWED_FILE_TYPE'] = 'document'
-app.config['DROPZONE_MAX_FILE_SIZE'] = 10
-
+# app.config['DROPZONE_ALLOWED_FILE_TYPE'] = 'document'
+# app.config['DROPZONE_MAX_FILE_SIZE'] = 10
+# Configure Upload Folder
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # --------------------------------------------------------------
 
+# ------------------- Gemini AI Configuration -------------------
+# Load the key securely from the environment
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    # This will prevent the app from starting if the key is missing
+    raise ValueError(
+        "GEMINI_API_KEY not found. Please create a .env file and add your key."
+    )
+
+genai.configure(api_key=GEMINI_API_KEY)
 # ---------------------- ROUTES ----------------------
 
 
@@ -120,11 +146,6 @@ def dashboard():
 def upload_form():
     username = session.get('username')
     return render_template('upload.html', username=username)
-
-
-@app.route('/upload', methods=['POST', 'GET'])
-def upload():
-    pass
 
 
 @app.route('/analyze', methods=['POST', 'GET'])

@@ -314,3 +314,30 @@
 .right-wrapper::-webkit-scrollbar-thumb:hover {
     background: #1d4fb6;
 }
+
+.drag-active {
+    border: 3px dashed #2D6CE3;
+    background-color: rgba(45, 108, 227, 0.1);
+}
+
+.analyze-btn{
+    text-align: center;
+    padding: 1.2rem;
+    font-size: 16px;
+    border: 3px solid white;
+    border-radius: 10px;
+    font-weight: bolder;
+    color: white;
+    background-color: #2D6CE3;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.analyze-btn:hover{
+    transform: translateY(-4px) scale(1.00);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+}
+
+.analyze-btn:active{
+    transform: translateY(-2px);
+    transition: transform 0.1s ease;
+}
