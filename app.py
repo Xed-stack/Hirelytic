@@ -5,7 +5,7 @@
 import os
 import json
 import PyPDF2
-import google.generativeai as genai
+from google import genai
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_mysqldb import MySQL
 from werkzeug.utils import secure_filename
@@ -44,7 +44,7 @@ if not GEMINI_API_KEY:
         "GEMINI_API_KEY not found. Please create a .env file and add your key."
     )
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 # ---------------------- ROUTES ----------------------
 
 
@@ -123,6 +123,7 @@ def login():
 
         if user and check_password_hash(user['passwordHash'], password):
             session['username'] = user['userName']
+            session['user_id'] = user['UserID']
             return redirect(url_for('dashboard'))
         else:
             # Pass error message and entered identifier back to template
@@ -148,9 +149,45 @@ def upload_form():
     return render_template('upload.html', username=username)
 
 
-@app.route('/analyze', methods=['POST', 'GET'])
+# A.I Analysis Route ===========================
+@app.route('/analyze', methods=['POST'])
 def analyze():
-    pass
+    if 'username' not in session:
+        return redirect(url_for('loginform'))
+    files = request.files.getlist('resumes')
+
+    cur = mysql.connection.cursor()
+    cur.execute("INSERT INTO uploads (usID, uploadDate) VALUES(%s, NOW())",
+                (session['user_id'], ))
+    mysql.connection.commit()
+
+    upload_id = cur.lastrowid
+
+    for file in files:
+        if file and file.filename.endswith('.pdf'):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+
+            # Extract text from PDF
+            with open(filepath, 'rb') as pdf_file:
+                reader = PyPDF2.PdfReader(pdf_file)
+                text = ''
+                for page in reader.pages:
+                    text += page.extract_text()
+
+            try:
+                # Call Gemini AI API for analysis
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=f"Analyze the following resume and provide insights:\n\n{text}"
+                )
+                analysis = response.text
+
+            except Exception as e:
+                analysis = f"Error during analysis: {str(e)}"
+
+    return render_template('results.html', username=session['username'], message="Analysis complete!", analysis=analysis)
 
 
 # ----------------------- END ROUTES ----------------------
