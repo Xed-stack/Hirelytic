@@ -5,7 +5,8 @@
 import os
 import json
 import PyPDF2
-from google import genai
+import requests
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_mysqldb import MySQL
 from werkzeug.utils import secure_filename
@@ -34,17 +35,67 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # --------------------------------------------------------------
 
-# ------------------- Gemini AI Configuration -------------------
-# Load the key securely from the environment
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not GEMINI_API_KEY:
-    # This will prevent the app from starting if the key is missing
-    raise ValueError(
-        "GEMINI_API_KEY not found. Please create a .env file and add your key."
-    )
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+if not OPENROUTER_API_KEY:
+    raise ValueError("OPENROUTER_API_KEY not found in environment variables")
+# ------------------- Llama AI Configuration -------------------
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+print("OpenRouter API key loaded:", bool(OPENROUTER_API_KEY))
+
+
+def analyze_resume_llama(text):
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an HR assistant that analyzes resumes."
+            },
+            {
+                "role": "user",
+                "content": f"""
+Analyze the resume and return ONLY valid JSON in this format:
+{{
+    "education_level": "Bachelor",
+    "years_experience": 3,
+    "skills": ["Python", "SQL", "Flask"],
+    "compatibility_score": 82,
+    "summary": "Short summary here"
+}}
+
+
+Resume:
+{text}
+"""
+            }
+        ]
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+
+    return response.json()["choices"][0]["message"]["content"]
+
+
+# # ------------------- Gemini AI Configuration -------------------
+# # Load the key securely from the environment
+# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# if not GEMINI_API_KEY:
+#     # This will prevent the app from starting if the key is missing
+#     raise ValueError(
+#         "GEMINI_API_KEY not found. Please create a .env file and add your key."
+#     )
+
+
 # ---------------------- ROUTES ----------------------
 
 
@@ -80,9 +131,11 @@ def signin():
         sql = "INSERT INTO users (userName, email, passwordHash) VALUES (%s, %s, %s)"
         cur.execute(sql, (username, email, hashed_password))
         mysql.connection.commit()
+        user_id = cur.lastrowid
         cur.close()
 
         session['username'] = username
+        session['user_id'] = user_id
         return render_template('dashboard.html', username=username)
 
     else:
@@ -152,42 +205,57 @@ def upload_form():
 # A.I Analysis Route ===========================
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    if 'username' not in session:
+    if 'user_id' not in session:
         return redirect(url_for('loginform'))
+
     files = request.files.getlist('resumes')
+    if not files or files[0].filename == '':
+        flash("No files selected")
+        return redirect(url_for('upload_form'))
 
     cur = mysql.connection.cursor()
-    cur.execute("INSERT INTO uploads (usID, uploadDate) VALUES(%s, NOW())",
-                (session['user_id'], ))
-    mysql.connection.commit()
 
+    # Create upload batch
+    cur.execute(
+        "INSERT INTO uploads (userID, uploadDate) VALUES (%s, NOW())",
+        (session['user_id'],)
+    )
+    mysql.connection.commit()
     upload_id = cur.lastrowid
 
     for file in files:
-        if file and file.filename.endswith('.pdf'):
+        if file and file.filename.lower().endswith('.pdf'):
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
 
-            # Extract text from PDF
+            #  Extract PDF text
+            text = ""
             with open(filepath, 'rb') as pdf_file:
                 reader = PyPDF2.PdfReader(pdf_file)
-                text = ''
                 for page in reader.pages:
-                    text += page.extract_text()
+                    text += page.extract_text() or ""
+
+            # AI analysis
+            analysis_text = analyze_resume_llama(text)
 
             try:
-                # Call Gemini AI API for analysis
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=f"Analyze the following resume and provide insights:\n\n{text}"
-                )
-                analysis = response.text
+                data = json.loads(analysis_text)
+            except:
+                continue  # skip bad AI response
 
-            except Exception as e:
-                analysis = f"Error during analysis: {str(e)}"
+            # Store candidate result
+            cur.execute("""
+                INSERT INTO candidates
+                (uploadID, fileName, analysisText)
+                VALUES (%s, %s, %s)
+            """, (upload_id, filename, analysis_text))
+            mysql.connection.commit()
 
-    return render_template('results.html', username=session['username'], message="Analysis complete!", analysis=analysis)
+    cur.close()
+
+    #  Redirect instead of render
+    return redirect(url_for('results', upload_id=upload_id))
 
 
 # ----------------------- END ROUTES ----------------------
