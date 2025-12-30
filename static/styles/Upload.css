@@ -53,20 +53,6 @@
     min-width: 500px;
 }
 
-/* Right-wrapper
-.right-wrapper{
-    margin-top: 6rem;
-    margin-right: 4rem;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border: 3px solid black;
-    max-width: 600px;
-    min-width: 500px;
-} */
-
 .header{
     text-align: center;
     margin-bottom: 1.2rem;

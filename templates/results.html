@@ -1,1 +1,112 @@
-{{analysis}}
+{% extends "base.html" %}
+
+
+{% block head %}
+    <title>Hirelytic - Analysis Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/results.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="dashboard-container">
+
+    <!-- HEADER -->
+    <h2 class="page-title">Resumes Analysis Summary</h2>
+    <p class="page-subtitle">
+        Based on your uploaded resumes and selected filters, here are the most compatible candidates.
+    </p>
+
+    <!-- SUMMARY CARDS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h4>Total Resumes Analyzed</h4>
+            <p>{{ candidates|length }}</p>
+        </div>
+<!-- 
+        <div class="stat-card">
+            <h4>Average Compatibility Score</h4>
+            <p>
+                {{
+                (candidates | map(attribute='compatibilityScore') | sum / candidates|length)
+                | round(1)
+                }}%
+            </p>
+        </div> -->
+
+        <div class="stat-card">
+            <h4>Processing Time</h4>
+            <p>{{ processing_time }}s</p>
+        </div>
+
+        <div class="stat-card">
+            <h4>Top Skill Match</h4>
+            <p>Python</p> <!-- placeholder -->
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="content-grid">
+
+        <!-- CANDIDATE RANKING -->
+        <div class="card large">
+            <h3>Candidate Ranking</h3>
+
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Candidate</th>
+                        <th>Compatibility</th>
+                        <th>Education</th>
+                        <th>Experience</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in candidates %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ c.fileName }}</td>
+                        <td>{{ c.compatibilityScore }}%</td>
+                        <td>{{ c.educationLevel }}</td>
+                        <td>{{ c.yearsExperience }} yrs</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="side-panel">
+
+            <!-- EDUCATION CHART -->
+            <div class="card">
+                <h3>Education Level</h3>
+                <div class="chart-placeholder">
+                    Donut Chart Here
+                </div>
+            </div>
+
+            <!-- REJECTED -->
+            <div class="card rejected">
+                <h3>Rejected</h3>
+                <p>
+                    {{
+                    candidates | selectattr('compatibilityScore', 'lt', 60) | list | length
+                    }}
+                    applicants
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="actions">
+        <a href="{{ url_for('upload_form') }}" class="btn secondary">
+            Re-analyze with New Filters
+        </a>
+        <button class="btn primary">
+            Export Report (PDF)
+        </button>
+    </div>
+
+</div>
+{% endblock %}

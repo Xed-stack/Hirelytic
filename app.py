@@ -208,6 +208,17 @@ def analyze():
     if 'user_id' not in session:
         return redirect(url_for('loginform'))
 
+    job_title = request.form.get('job_title')
+    job_description = request.form.get('job_description')
+    required_skills = request.form.get('required_skills')
+    education_req = request.form.get('education_requirement')
+    experience_req = request.form.get('experience_requirement')
+    certifications = request.form.get('certifications')
+    tools = request.form.get('tools')
+
+    # # Combine extra skills/tools
+    # other_skills = ", ".join(filter(None, [certifications, tools]))
+
     files = request.files.getlist('resumes')
     if not files or files[0].filename == '':
         flash("No files selected")
@@ -216,46 +227,125 @@ def analyze():
     cur = mysql.connection.cursor()
 
     # Create upload batch
-    cur.execute(
-        "INSERT INTO uploads (userID, uploadDate) VALUES (%s, NOW())",
-        (session['user_id'],)
-    )
+    cur.execute("""
+        INSERT INTO uploads
+        (userID, jobTitle, requiredSkills, educationalRequirement,
+        experienceRequirement, uploadDate)
+        VALUES (%s, %s, %s, %s, %s, NOW())
+    """, (
+        session['user_id'],
+        job_title,
+        required_skills,
+        education_req,
+        experience_req
+    ))
     mysql.connection.commit()
     upload_id = cur.lastrowid
 
+    start_time = datetime.now()
+
     for file in files:
-        if file and file.filename.lower().endswith('.pdf'):
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
+        if not file.filename.lower().endswith('.pdf'):
+            continue
 
-            #  Extract PDF text
-            text = ""
-            with open(filepath, 'rb') as pdf_file:
-                reader = PyPDF2.PdfReader(pdf_file)
-                for page in reader.pages:
-                    text += page.extract_text() or ""
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
 
-            # AI analysis
-            analysis_text = analyze_resume_llama(text)
+        # Extract PDF text
+        text = ""
+        with open(filepath, 'rb') as pdf:
+            reader = PyPDF2.PdfReader(pdf)
+            for page in reader.pages:
+                text += page.extract_text() or ""
 
-            try:
-                data = json.loads(analysis_text)
-            except:
-                continue  # skip bad AI response
+        # AI analysis
+        try:
+            ai_response = analyze_resume_llama(text)
+            data = json.loads(ai_response)
+        except Exception as e:
+            print("AI parsing error:", e)
+            continue
 
-            # Store candidate result
+        # Store candidate
+        cur.execute("""
+            INSERT INTO candidates
+            (uploadID, fileName, educationLevel, yearsExperience, compatibilityScore, analysisText)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            upload_id,
+            filename,
+            data["education_level"],
+            data["years_experience"],
+            data["compatibility_score"],
+            data["summary"]
+        ))
+        candidate_id = cur.lastrowid
+
+        # Store skills
+        for skill in data["skills"]:
             cur.execute("""
-                INSERT INTO candidates
-                (uploadID, fileName, analysisText)
-                VALUES (%s, %s, %s)
-            """, (upload_id, filename, analysis_text))
-            mysql.connection.commit()
+                INSERT INTO candidate_skills (candidateID, skillName)
+                VALUES (%s, %s)
+            """, (candidate_id, skill))
+
+        mysql.connection.commit()
+
+        # Update processing time & analysis date in uploads
+        processing_time = int((datetime.now() - start_time).total_seconds())
+
+        cur.execute("""
+            UPDATE uploads
+            SET processingTime = %s,
+                analysisDate = CURDATE()
+            WHERE uploadID = %s
+        """, (processing_time, upload_id))
+
+        mysql.connection.commit()
 
     cur.close()
 
-    #  Redirect instead of render
     return redirect(url_for('results', upload_id=upload_id))
+
+
+# Results Route ==============================
+@app.route('/results/<int:upload_id>')
+def results(upload_id):
+    if 'user_id' not in session:
+        return redirect(url_for('loginform'))
+
+    cur = mysql.connection.cursor()
+
+    # Fetch upload info (summary metrics)
+    cur.execute("""
+        SELECT *
+        FROM uploads
+        WHERE uploadID = %s AND userID = %s
+    """, (upload_id, session['user_id']))
+    upload = cur.fetchone()
+
+    if not upload:
+        cur.close()
+        flash("Upload not found or access denied")
+        return redirect(url_for('dashboard'))
+
+    # Fetch analyzed candidates
+    cur.execute("""
+        SELECT *
+        FROM candidates
+        WHERE uploadID = %s
+        ORDER BY compatibilityScore DESC
+    """, (upload_id,))
+    candidates = cur.fetchall()
+
+    cur.close()
+
+    return render_template(
+        'results.html',
+        upload=upload,
+        candidates=candidates,
+        processing_time=upload['processingTime']
+    )
 
 
 # ----------------------- END ROUTES ----------------------

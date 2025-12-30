@@ -28,7 +28,7 @@
     </div>
 </nav>
 
-
+<form action="{{ url_for('analyze') }}" id="analyzeForm" method="POST" enctype="multipart/form-data">
 
 <div class="mainContainer">
 
@@ -44,12 +44,7 @@ the AI-powered evaluation.Supported formats:
         </div>
     
         <!-- Upload Box container -->
-        <div class="box" id="box">
-            <!-- <div class="input-bx">
-            </div>  -->
-                <!-- Upload Form -->
-                <form action="{{ url_for('analyze') }}" id="analyzeForm" method="POST" enctype="multipart/form-data">
-                    
+        <div class="box" id="box">                
                     <input type="file" id="upload" name="resumes" accept=".pdf" hidden webkitdirectory multiple>
                     <label for="upload" class="uploadlabel">
                         <span><i class="fa fa-cloud-upload"></i></span>
@@ -59,67 +54,55 @@ the AI-powered evaluation.Supported formats:
                 
                     <div class="filewrapper" id="filewrapper">
                         <h3 class="uploaded">Uploaded Files:</h3>
-                        <!-- <div class="showfilebox">
-                            <div class="left">
-                                <span class="filetype">PDF</span>
-                                <h3>Placeholder.pdf</h3>
-                            </div>
-
-                            <div class="right">
-                                <span>&#215;</span>
-                            </div>
-                        </div> -->
                     </div>
 
                     <div class="btn_analyze" type="submit">
-                            <a href="{{ url_for('analyze') }}" type="submit">Analyze Now</a>
-                        </div>
+                            <button type="submit" class="analyze-btn">Analyze Now</button>
                     </div>
-                </form>
-        <!-- End upload box container  -->
+        </div>
         
     </div>
 
-        <div class="right-wrapper">
+    <div class="right-wrapper">
 
         <h2 class="panel-title">Job Requirements</h2>
 
-        <!-- Job Title -->
-        <label class="hr-label">Job Position / Title</label>
-        <input type="text" class="hr-input" placeholder="e.g., Data Analyst">
+            <!-- Job Title -->
+            <label class="hr-label">Job Position / Title</label>
+            <input type="text" class="hr-input" placeholder="e.g., Data Analyst" name="job_title">
 
-        <!-- Job Description -->
-        <label class="hr-label">Job Description</label>
-        <textarea class="hr-textarea" placeholder="Brief description of the role"></textarea>
+            <!-- Job Description -->
+            <label class="hr-label">Job Description</label>
+            <textarea class="hr-textarea" placeholder="Brief description of the role" name="job_description"></textarea>
+            <!-- Required Skills -->
+            <label class="hr-label">Required Skills</label>
+            <input type="text" name="required_skills" class="hr-input" placeholder="Type a skill separated by commas">
 
-        <!-- Required Skills -->
-        <label class="hr-label">Required Skills</label>
-        <input type="text" class="hr-input" placeholder="Type a skill separated by commas">
+            <!-- Education -->
+            <label class="hr-label">Required Education Level</label>
+            <select name="educational_requirement" class="hr-select">
+                <option>Bachelor's Degree</option>
+                <option>Master's Degree</option>
+                <option>PhD</option>
+                <option>Associate Degree</option>
+                <option>High School Graduate</option>
+            </select>
 
-        <!-- Education -->
-        <label class="hr-label">Required Education Level</label>
-        <select class="hr-select">
-            <option>Bachelor's Degree</option>
-            <option>Master's Degree</option>
-            <option>PhD</option>
-            <option>Associate Degree</option>
-            <option>High School Graduate</option>
-        </select>
+            <!-- Experience -->
+            <label class="hr-label">Minimum Years of Experience</label>
+            <input type="number" name="experience_requirement" class="hr-input" placeholder="e.g., 2" min="0">
 
-        <!-- Experience -->
-        <label class="hr-label">Minimum Years of Experience</label>
-        <input type="number" class="hr-input" placeholder="e.g., 2" min="0">
+            <!-- Preferred Certifications -->
+            <label class="hr-label">Preferred Certifications</label>
+            <input type="text" class="hr-input" name="certifications" placeholder="Type a certification and press Enter">
 
-        <!-- Preferred Certifications -->
-        <label class="hr-label">Preferred Certifications</label>
-        <input type="text" class="hr-input" placeholder="Type a certification and press Enter">
-
-        <!-- Required Tools -->
-        <label class="hr-label">Required Tools / Technologies</label>
-        <input type="text" class="hr-input" placeholder="e.g., Excel, PowerBI">
+            <!-- Required Tools -->
+            <label class="hr-label">Required Tools / Technologies</label>
+            <input type="text" name="tools" class="hr-input" placeholder="e.g., Excel, PowerBI">
     </div>
 
 </div>
+</form>
 <!-- ^^^ End Main Container ^^^ -->
 
 
