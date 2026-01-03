@@ -180,15 +180,90 @@ def login():
     # GET request
     return render_template('Login.html')
 
+# Dashboard Route ==========================
+
 
 @app.route('/dashboard')
 def dashboard():
-    username = session.get('username')
-    if username:
-        return render_template('dashboard.html', username=username)
-    else:
-        print(f"User not found")
+    if 'user_id' not in session:
         return redirect(url_for('loginform'))
+
+    # Get dates from filter
+    start_date_raw = request.args.get('start_date', '')
+    end_date_raw = request.args.get('end_date', '')
+
+    # Convert "YYYY-MM-DD" to "YYYYMMDD" integer to match your SQL schema
+    start_filter = start_date_raw.replace(
+        '-', '') if start_date_raw else '20000101'
+    end_filter = end_date_raw.replace('-', '') if end_date_raw else '20991231'
+
+    cur = mysql.connection.cursor()
+    user_id = session['user_id']
+    date_filter = "AND u.analysisDate BETWEEN %s AND %s"
+
+    # 1. Total Resumes
+    cur.execute(f"""
+        SELECT COUNT(c.candidateID) as total 
+        FROM candidates c 
+        JOIN uploads u ON c.uploadID = u.uploadID 
+        WHERE u.userID = %s {date_filter}
+    """, (user_id, start_filter, end_filter))
+    total_resumes = cur.fetchone()['total'] or 0
+
+    # 2. Skill Distribution
+    cur.execute(f"""
+        SELECT cs.skillName, COUNT(*) as count 
+        FROM candidate_skills cs 
+        JOIN candidates c ON cs.candidateID = c.candidateID 
+        JOIN uploads u ON c.uploadID = u.uploadID
+        WHERE u.userID = %s {date_filter}
+        GROUP BY cs.skillName ORDER BY count DESC LIMIT 6
+    """, (user_id, start_filter, end_filter))
+    skills_data = cur.fetchall()
+
+    # 3. Dynamic KPIs (Avg Match & Top Talent)
+    cur.execute(f"""
+        SELECT AVG(c.compatibilityScore) as avg_score 
+        FROM candidates c 
+        JOIN uploads u ON c.uploadID = u.uploadID 
+        WHERE u.userID = %s {date_filter}
+    """, (user_id, start_filter, end_filter))
+    avg_match = round(cur.fetchone()['avg_score'] or 0)
+
+    cur.execute(f"""
+        SELECT COUNT(*) as top_count 
+        FROM candidates c 
+        JOIN uploads u ON c.uploadID = u.uploadID 
+        WHERE u.userID = %s AND c.compatibilityScore >= 80 {date_filter}
+    """, (user_id, start_filter, end_filter))
+    top_talent = cur.fetchone()['top_count'] or 0
+
+    # 4. Score Distribution for Doughnut Chart
+    cur.execute(f"""
+        SELECT 
+            SUM(CASE WHEN compatibilityScore >= 80 THEN 1 ELSE 0 END) as High,
+            SUM(CASE WHEN compatibilityScore >= 50 AND compatibilityScore < 80 THEN 1 ELSE 0 END) as Medium,
+            SUM(CASE WHEN compatibilityScore < 50 THEN 1 ELSE 0 END) as Low
+        FROM candidates c 
+        JOIN uploads u ON c.uploadID = u.uploadID 
+        WHERE u.userID = %s {date_filter}
+    """, (user_id, start_filter, end_filter))
+    score_data = cur.fetchone()
+    score_dist = [score_data['High'] or 0,
+                  score_data['Medium'] or 0, score_data['Low'] or 0]
+
+    has_analytics = total_resumes > 0
+    return render_template('dashboard.html',
+                           username=session['username'],
+                           has_analytics=has_analytics,
+                           total_resumes=total_resumes,
+                           avg_match=avg_match,
+                           top_talent=top_talent,
+                           skills_data=skills_data,
+                           score_dist=score_dist,
+                           start_date=start_date_raw,
+                           end_date=end_date_raw)
+#   Upload Form Route ========================
 
 
 @app.route('/upload_form')

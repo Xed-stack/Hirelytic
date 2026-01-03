@@ -16,6 +16,33 @@
 </head>
 <body>
     {% block body %}
+
+
+    <script>
+        document.getElementById('logout-link').addEventListener('click', function(e) {
+            // 1. Prevent the link from immediately navigating
+            e.preventDefault();
+            const logoutUrl = this.getAttribute('href');
+
+            // 2. Trigger SweetAlert
+            Swal.fire({
+                title: 'Sign Out?',
+                text: "Are you sure you want to end your session?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6', // Matching your dashboard blue
+                cancelButtonColor: '#ef4444',  // Matching your dashboard red
+                confirmButtonText: 'Yes, sign out',
+                cancelButtonText: 'Stay logged in',
+                reverseButtons: true
+            }).then((result) => {
+                // 3. If confirmed, proceed to the logout URL
+                if (result.isConfirmed) {
+                    window.location.href = logoutUrl;
+                }
+            });
+        });
+    </script>
     {% endblock %}
 </body>
 </html>

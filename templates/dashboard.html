@@ -1,74 +1,156 @@
 {% extends "base.html" %}
-
 {% block head %}
-<title>Analytics Dashboard</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='styles/dashboard.css') }}">
-
+<title>HireLytic | Dashboard</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='styles/dashboard_new.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
 
 {% block body %}
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="nav-left" >
+        <img src="{{ url_for('static', filename='assets/Logo_Full.png') }}" class="logo logo-img">
+        <a  href="{{ url_for('home') }}" class="link-primary link-underline-opacity-0 font-size-20"><span >HireLytic</span></a>
+        <a href="{{ url_for('dashboard') }}" class="btn">Home</a>
+        <hr>
+    </div>
+
+
+    <div class="nav-right">
+        <img src="{{ url_for('static', filename='assets/profile.jpg') }}" class="logo-profile ">
+        <a href="#" class="link-dark link-underline-opacity-0">{{ session['username'] }}</a>
+        <a href="{{ url_for('signout') }}" class="fa fa-sign-out" id="logout-link"></a>
+    </div>
+</nav>
+
+
 <div class="dashboard-container">
+    <header class="dashboard-header">
+        <h1 class="brand-title">HR Insights: {{ session['username'] }}</h1>
+        <a href="{{ url_for('upload_form') }}" class="btn primary-btn">+ New Analysis</a>
+    </header>
 
-<header class="header">
-    <div class="system-name">
-        <i class="fas fa-chart-line"></i>
-        Hirelytic
-        <div class="nav-buttons">
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary"><i class="fas fa-home"></i> Home</a>
+    {% if not has_analytics %}
+    <div class="empty-state">
+        <div class="icon-placeholder">📊</div>
+        <h2>No Analytics Available Yet</h2>
+        <p>Upload your first batch of resumes to generate hiring insights.</p>
+        <a href="{{ url_for('upload_form') }}" class="btn primary-btn">Upload Resumes Now</a>
+    </div>
+    {% else %}
+
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <p class="label">Total Resumes Processed</p>
+            <h3 class="value">{{ total_resumes }}</h3>
+        </div>
+        <div class="stat-card green">
+            <p class="label">Global Avg. Match</p>
+            <h3 class="value">{{ avg_match }}%</h3>
+        </div>
+        <div class="stat-card purple">
+            <p class="label">Top Talent Found (80%+)</p>
+            <h3 class="value">{{ top_talent }}</h3>
         </div>
     </div>
-    <div class="user-actions">
-    <span class="username">{{ username }}</span>
-
-    <span class="user-divider"></span>
-
-    <a href="{{ url_for('signout') }}" class="signout-btn" title="Sign Out">
-        <i class="fas fa-sign-out-alt"></i>
-    </a>
+    <div class="filter-container">
+    <form action="{{ url_for('dashboard') }}" method="GET" class="filter-form">
+        <div class="input-group">
+            <label>From:</label>
+            <input type="date" name="start_date" value="{{ start_date }}">
+        </div>
+        <div class="input-group">
+            <label>To:</label>
+            <input type="date" name="end_date" value="{{ end_date }}">
+        </div>
+        <button type="submit" class="btn secondary-btn">Apply Filter</button>
+        <a href="{{ url_for('dashboard') }}" class="btn text-btn">Reset</a>
+    </form>
     </div>
-</header>
 
-<main class="main-content">
-    <h1 class="greeting">Good day, <span>{{ username.split(' ')[0] }}</span>!</h1>
+    <div class="charts-grid">
+        <div class="chart-box">
+            <h3>Top Skills in Talent Pool</h3>
+            <canvas id="skillChart"></canvas>
+        </div>
 
-    <section class="analytics-section">
-        <h2><i class="fas fa-chart-bar"></i> Your Analytics</h2>
-
-        {% if not has_analytics %}
-        <div class="empty-state">
-            <div class="empty-state-icon"><i class="fas fa-file-alt"></i></div>
-            <p>You don't have analytics yet</p>
-            <p>Start by uploading your first batch of resumes</p>
-
-            <div class="upload-area">
-                <i class="fas fa-cloud-upload-alt" style="font-size:3rem;color:var(--primary-color)"></i>
-                <p>Click below to upload resumes</p>
-                <a href="{{ url_for('upload_form') }}" class="btn btn-primary" style="margin-top:1rem;display:inline-flex;">Upload Files</a>
+        <div class="chart-box">
+            <h3>Applicant Quality (Match Score)</h3>
+            <div class="chart-container">
+                <canvas id="qualityChart"></canvas>
             </div>
         </div>
-        {% else %}
-
-        <div class="analytics-grid">
-            <div class="analytics-card">
-                <h3>Resumes Processed</h3>
-                <div style="font-size:2.5rem;font-weight:700">{{ analytics.total_resumes }}</div>
-            </div>
-
-            <div class="analytics-card">
-                <h3>Average Score</h3>
-                <div style="font-size:2.5rem;font-weight:700">{{ analytics.avg_score }}%</div>
-            </div>
-
-            <div class="analytics-card">
-                <h3>Top Skills</h3>
-                {% for skill in analytics.top_skills %}
-                    <span class="btn btn-secondary">{{ skill }}</span>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-    </section>
-</main>
+    </div>
+    {% endif %}
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+
+        document.getElementById('logout-link').addEventListener('click', function(e) {
+            // 1. Prevent the link from immediately navigating
+            e.preventDefault();
+            const logoutUrl = this.getAttribute('href');
+
+            // 2. Trigger SweetAlert
+            Swal.fire({
+                title: 'Sign Out?',
+                text: "Are you sure you want to end your session?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6', // Matching your dashboard blue
+                cancelButtonColor: '#ef4444',  // Matching your dashboard red
+                confirmButtonText: 'Yes, sign out',
+                cancelButtonText: 'Stay logged in',
+                reverseButtons: true
+            }).then((result) => {
+                // 3. If confirmed, proceed to the logout URL
+                if (result.isConfirmed) {
+                    window.location.href = logoutUrl;
+                }
+            });
+        });
+
+
+    // HAYAAN niyo lang kashit may red na LINES, gagana padin yan
+    // naga crazy lang si ChartJS sa template rendering
+
+    // 1. Skill Distribution Bar Chart
+    const skillCtx = document.getElementById('skillChart').getContext('2d');
+    new Chart(skillCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for item in skills_data %}"{{ item.skillName }}",{% endfor %}],
+            datasets: [{
+                label: 'Candidate Count',
+                data: [{% for item in skills_data %}{{ item.count }},{% endfor %}],
+                backgroundColor: '#3b82f6',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Makes it horizontal for better readability
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // 2. Applicant Quality Doughnut Chart
+    new Chart(document.getElementById('qualityChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['High Match (80%+)', 'Potential (50-79%)', 'Low Fit (<50%)'],
+            datasets: [{
+                data: {{ score_dist | tojson }},
+                backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+</script>
 {% endblock %}
