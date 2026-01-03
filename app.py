@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
+from collections import Counter
 
 load_dotenv()
 app = Flask(__name__)
@@ -44,7 +45,7 @@ if not OPENROUTER_API_KEY:
 print("OpenRouter API key loaded:", bool(OPENROUTER_API_KEY))
 
 
-def analyze_resume_llama(text):
+def analyze_resume_llama(text, job):
     url = "https://openrouter.ai/api/v1/chat/completions"
 
     headers = {
@@ -57,23 +58,29 @@ def analyze_resume_llama(text):
         "messages": [
             {
                 "role": "system",
-                "content": "You are an HR assistant that analyzes resumes."
+                "content": "You are an HR assistant that evaluates resumes against a specific job requirement."
             },
             {
                 "role": "user",
                 "content": f"""
-Analyze the resume and return ONLY valid JSON in this format:
-{{
-    "education_level": "Bachelor",
-    "years_experience": 3,
-    "skills": ["Python", "SQL", "Flask"],
-    "compatibility_score": 82,
-    "summary": "Short summary here"
-}}
-
+Job Title: {job['job_title']}
+Job Description: {job['job_description']}
+Required Skills: {job['required_skills']}
+Required Education: {job['educational_requirement']}
+Minimum Experience: {job['experience_requirement']} years
 
 Resume:
 {text}
+
+Return STRICT JSON:
+{{
+  "education_level": "",
+  "years_experience": number,
+  "skills": [],
+  "matched_skills": [],
+  "compatibility_score": number,
+  "summary": ""
+}}
 """
             }
         ]
@@ -83,18 +90,6 @@ Resume:
     response.raise_for_status()
 
     return response.json()["choices"][0]["message"]["content"]
-
-
-# # ------------------- Gemini AI Configuration -------------------
-# # Load the key securely from the environment
-# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-# if not GEMINI_API_KEY:
-#     # This will prevent the app from starting if the key is missing
-#     raise ValueError(
-#         "GEMINI_API_KEY not found. Please create a .env file and add your key."
-#     )
-
 
 # ---------------------- ROUTES ----------------------
 
@@ -208,17 +203,6 @@ def analyze():
     if 'user_id' not in session:
         return redirect(url_for('loginform'))
 
-    job_title = request.form.get('job_title')
-    job_description = request.form.get('job_description')
-    required_skills = request.form.get('required_skills')
-    education_req = request.form.get('education_requirement')
-    experience_req = request.form.get('experience_requirement')
-    certifications = request.form.get('certifications')
-    tools = request.form.get('tools')
-
-    # # Combine extra skills/tools
-    # other_skills = ", ".join(filter(None, [certifications, tools]))
-
     files = request.files.getlist('resumes')
     if not files or files[0].filename == '':
         flash("No files selected")
@@ -227,18 +211,26 @@ def analyze():
     cur = mysql.connection.cursor()
 
     # Create upload batch
+    job = {
+        "job_title": request.form.get("job_title"),
+        "job_description": request.form.get("job_description"),
+        "required_skills": request.form.get("required_skills"),
+        "educational_requirement": request.form.get("educational_requirement"),
+        "experience_requirement": request.form.get("experience_requirement")
+    }
+
     cur.execute("""
         INSERT INTO uploads
-        (userID, jobTitle, requiredSkills, educationalRequirement,
-        experienceRequirement, uploadDate)
-        VALUES (%s, %s, %s, %s, %s, NOW())
+        (userID, jobTitle, requiredSkills, educationalRequirement, experienceRequirement, uploadDate)
+        VALUES (%s,%s,%s,%s,%s,NOW())
     """, (
         session['user_id'],
-        job_title,
-        required_skills,
-        education_req,
-        experience_req
+        job["job_title"],
+        job["required_skills"],
+        job["educational_requirement"],
+        job["experience_requirement"]
     ))
+
     mysql.connection.commit()
     upload_id = cur.lastrowid
 
@@ -261,8 +253,14 @@ def analyze():
 
         # AI analysis
         try:
-            ai_response = analyze_resume_llama(text)
-            data = json.loads(ai_response)
+            ai_response = analyze_resume_llama(text, job)
+
+            json_start = ai_response.find("{")
+            json_end = ai_response.rfind("}") + 1
+            clean_json = ai_response[json_start:json_end]
+
+            data = json.loads(clean_json)
+
         except Exception as e:
             print("AI parsing error:", e)
             continue
@@ -293,7 +291,6 @@ def analyze():
 
         # Update processing time & analysis date in uploads
         processing_time = int((datetime.now() - start_time).total_seconds())
-
         cur.execute("""
             UPDATE uploads
             SET processingTime = %s,
@@ -338,13 +335,37 @@ def results(upload_id):
     """, (upload_id,))
     candidates = cur.fetchall()
 
+    education_counts = Counter(
+        c["educationLevel"] or "Unknown" for c in candidates
+    )
+
+    education_labels = list(education_counts.keys())
+    education_values = list(education_counts.values())
+
+    # Get top matched skill for this upload
+    cur.execute("""
+        SELECT cs.skillName, COUNT(*) AS cnt
+        FROM candidate_skills cs
+        JOIN candidates c ON cs.candidateID = c.candidateID
+        WHERE c.uploadID = %s
+        GROUP BY cs.skillName
+        ORDER BY cnt DESC
+        LIMIT 1
+    """, (upload_id,))
+
+    top_skill_row = cur.fetchone()
+    top_skill = top_skill_row['skillName'] if top_skill_row else "N/A"
+
     cur.close()
 
     return render_template(
         'results.html',
         upload=upload,
         candidates=candidates,
-        processing_time=upload['processingTime']
+        processing_time=upload['processingTime'],
+        top_skill=top_skill,
+        education_labels=education_labels,
+        education_values=education_values
     )
 
 
