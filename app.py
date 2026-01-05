@@ -16,7 +16,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from collections import Counter
 
 # Path for PythonAnywhere environment variables
-project_folder = os.path.expanduser('~/your_project_name')
+project_folder = os.path.expanduser('~/Hirelytic')
 load_dotenv(os.path.join(project_folder, '.env'))
 
 # load_dotenv()
