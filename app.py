@@ -15,16 +15,25 @@ from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from collections import Counter
 
-load_dotenv()
+# Path for PythonAnywhere environment variables
+project_folder = os.path.expanduser('~/your_project_name')
+load_dotenv(os.path.join(project_folder, '.env'))
+
+# load_dotenv()
 app = Flask(__name__)
 app.secret_key = "Ambatukam_secret_key"
 app.jinja_env.filters['fromjson'] = json.loads
 
 # ------------------- Database Configuration -------------------
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'hirelytic'
+# app.config['MYSQL_HOST'] = 'localhost'
+# app.config['MYSQL_USER'] = 'root'
+# app.config['MYSQL_PASSWORD'] = ''
+# app.config['MYSQL_DB'] = 'hirelytic'
+app.config['MYSQL_HOST'] = os.getenv(
+    'DB_HOST', 'lalax.mysql.pythonanywhere-services.com')
+app.config['MYSQL_USER'] = os.getenv('DB_USER', 'lalax')
+app.config['MYSQL_PASSWORD'] = os.getenv('DB_PASS', 'Xedrikpogi69')
+app.config['MYSQL_DB'] = os.getenv('DB_NAME', 'lalax$hirelytic')
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
