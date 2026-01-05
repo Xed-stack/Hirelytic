@@ -18,6 +18,7 @@ from collections import Counter
 load_dotenv()
 app = Flask(__name__)
 app.secret_key = "Ambatukam_secret_key"
+app.jinja_env.filters['fromjson'] = json.loads
 
 # ------------------- Database Configuration -------------------
 app.config['MYSQL_HOST'] = 'localhost'
@@ -63,25 +64,55 @@ def analyze_resume_llama(text, job):
             {
                 "role": "user",
                 "content": f"""
+You are an ATS system.
+
+Evaluate the resume STRICTLY against the job requirements using the rules below.
+
+SCORING RULES (MANDATORY):
+- Skills match = 50%
+- Experience match = 30%
+- Education match = 20%
+
+Scoring details:
+- If MOST required skills are present → skills score ≥ 40
+- If years of experience >= required → experience score ≥ 25
+- If education meets or exceeds requirement → education score ≥ 15
+- Strong overall match MUST score ≥ 80
+- Weak or unrelated resumes MUST score < 50
+
 Job Title: {job['job_title']}
 Job Description: {job['job_description']}
 Required Skills: {job['required_skills']}
 Required Education: {job['educational_requirement']}
 Minimum Experience: {job['experience_requirement']} years
 
-Resume:
+Resume Text:
 {text}
 
-Return STRICT JSON:
+If compatibility_score < 60:
+- Populate rejection_reasons with clear, human-readable reasons.
+- Reasons must reference missing skills, insufficient experience, or unmet education.
+- Use bullet-style phrases (not sentences).
+
+If compatibility_score >= 60:
+- rejection_reasons must be an empty array.
+
+Return ONLY valid JSON:
+CRITICAL: The "rejection_reasons" field MUST be a list of strings, NOT a bulleted list.
+
+Example of correct format:
 {{
-  "education_level": "",
-  "years_experience": number,
-  "skills": [],
-  "matched_skills": [],
-  "compatibility_score": number,
-  "summary": ""
+  "education_level": "Bachelor's Degree",
+  "years_experience": 2,
+  "skills": ["Skill 1", "Skill 2"],
+  "matched_skills": ["Skill 1"],
+  "compatibility_score": 85,
+  "summary": "Great candidate.",
+  "rejection_reasons": ["Reason one", "Reason two"]
 }}
+
 """
+
             }
         ]
     }
@@ -330,28 +361,53 @@ def analyze():
         try:
             ai_response = analyze_resume_llama(text, job)
 
-            json_start = ai_response.find("{")
-            json_end = ai_response.rfind("}") + 1
-            clean_json = ai_response[json_start:json_end]
+            # 1. Use Regex to find the JSON block (ignores AI conversational filler)
+            import re
+            json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
+
+            if not json_match:
+                print(f"No JSON found for {filename}")
+                continue
+
+            clean_json = json_match.group(0)
+
+            # 2. Handle common AI JSON typos (like trailing commas)
+            # This is a common cause for "Expecting value" errors
+            clean_json = re.sub(r',\s*([\]}])', r'\1', clean_json)
 
             data = json.loads(clean_json)
 
         except Exception as e:
-            print("AI parsing error:", e)
+            print(f"AI parsing error for {filename}: {e}")
+            # Log the raw response to see exactly what Llama sent back
+            print(f"Raw AI Response: {ai_response}")
             continue
+        # try:
+        #     ai_response = analyze_resume_llama(text, job)
+
+        #     json_start = ai_response.find("{")
+        #     json_end = ai_response.rfind("}") + 1
+        #     clean_json = ai_response[json_start:json_end]
+
+        #     data = json.loads(clean_json)
+
+        # except Exception as e:
+        #     print("AI parsing error:", e)
+        #     continue
 
         # Store candidate
         cur.execute("""
             INSERT INTO candidates
-            (uploadID, fileName, educationLevel, yearsExperience, compatibilityScore, analysisText)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            (uploadID, fileName, educationLevel, yearsExperience, compatibilityScore, analysisText, rejectionReasons)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (
             upload_id,
             filename,
             data["education_level"],
             data["years_experience"],
             data["compatibility_score"],
-            data["summary"]
+            data["summary"],
+            json.dumps(data.get("rejection_reasons", []))
         ))
         candidate_id = cur.lastrowid
 
@@ -385,6 +441,9 @@ def analyze():
 def results(upload_id):
     if 'user_id' not in session:
         return redirect(url_for('loginform'))
+
+    print("POST FORM:", request.form)
+    print("FILES:", request.files)
 
     cur = mysql.connection.cursor()
 
@@ -430,6 +489,9 @@ def results(upload_id):
 
     top_skill_row = cur.fetchone()
     top_skill = top_skill_row['skillName'] if top_skill_row else "N/A"
+    avg_score = round(
+        sum(c['compatibilityScore'] for c in candidates) / len(candidates), 1
+    ) if candidates else 0
 
     cur.close()
 
@@ -440,7 +502,8 @@ def results(upload_id):
         processing_time=upload['processingTime'],
         top_skill=top_skill,
         education_labels=education_labels,
-        education_values=education_values
+        education_values=education_values,
+        avg_score=avg_score
     )
 
 

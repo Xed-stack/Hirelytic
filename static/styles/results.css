@@ -118,3 +118,18 @@
     background: #e5e7eb;
     color: #111827;
 }
+
+.rejected-label {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.accepted-label {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.rejection-row {
+  background: #fff6f6;
+  font-size: 0.9em;
+}

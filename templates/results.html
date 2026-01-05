@@ -41,11 +41,21 @@
 
         <div class="stat-card">
             <h4>Average Compatibility Score</h4>
+            
             <p>
-                {{
-                (candidates | map(attribute='compatibilityScore') | sum / candidates|length)
-                | round(1)
-                }}%
+                <!-- {% if candidates|length > 0 %}
+                    {{
+                    (candidates | map(attribute='compatibilityScore') | sum / candidates|length)
+                    | round(1)
+                    }}%
+                {% else %}
+                    0%
+                {% endif %} -->
+                {% if avg_score > 0 %}
+                    {{ avg_score }}%
+                {% else %}
+                    0%
+                {% endif %}
             </p>
         </div>
 
@@ -75,6 +85,7 @@
                         <th>Compatibility</th>
                         <th>Education</th>
                         <th>Experience</th>
+                        <th>Decision</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,8 +96,29 @@
                         <td>{{ c.compatibilityScore }}%</td>
                         <td>{{ c.educationLevel }}</td>
                         <td>{{ c.yearsExperience }} yrs</td>
+                        <td>
+                            {% if c.compatibilityScore < 60 %}
+                                <span class="rejected-label">Rejected</span>
+                            {% else %}
+                                <span class="accepted-label">Qualified</span>
+                            {% endif %}
+                        </td>
                     </tr>
+
+                    {% if c.compatibilityScore < 60 %}
+                    <tr class="rejection-row">
+                        <td colspan="6">
+                            <strong>Why Rejected:</strong>
+                            <ul>
+                                {% for reason in c.rejectionReasons | fromjson %}
+                                    <li>{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endif %}
                     {% endfor %}
+
                 </tbody>
             </table>
         </div>
@@ -134,23 +166,26 @@ const ctx = document.getElementById('educationChart');
 const educationLabels = {{ education_labels | tojson | safe }};
 const educationValues = {{ education_values | tojson | safe }};
 
-new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-        labels: educationLabels,
-        datasets: [{
-            data: educationValues,
-            borderWidth: 1
-        }]
-    },
-    options: {
-        plugins: {
-            legend: {
-                position: 'bottom'
+if (educationLabels.length > 0) {
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: educationLabels,
+            datasets: [{
+                data: educationValues,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
             }
         }
-    }
-});
+    });
+}
+
 </script>
 
 

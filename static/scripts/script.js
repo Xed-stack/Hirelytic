@@ -181,17 +181,52 @@ window.addEventListener("load", () => {
   // If your Analyze control is an <a>, convert it to submit the form.
   // It's better to use <button type="submit"> but this keeps backward compatibility.
   // --------------------
-  if (analyzeLink) {
-    analyzeLink.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      // basic validation (ensure at least one file)
-      if (filesArray.length === 0) {
-        alert("Please upload at least one PDF resume before analyzing.");
-        return;
-      }
-      form.submit();
-    });
-}
+//   if (analyzeLink) {
+//     analyzeLink.addEventListener("click", (ev) => {
+//       ev.preventDefault();
+//       // basic validation (ensure at least one file)
+//       if (filesArray.length === 0) {
+//         alert("Please upload at least one PDF resume before analyzing.");
+//         return;
+//       }
+//       form.submit();
+//     });
+// }
 
+form.addEventListener("submit", (e) => {
+    // 1. Final check for files
+    if (filesArray.length === 0) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'No files selected',
+            text: 'Please upload at least one PDF resume.',
+            confirmButtonColor: '#3085d6'
+        });
+        return;
+    }
+
+    // 2. Sync files to the input for the Flask backend
+    const dt = new DataTransfer();
+    filesArray.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+
+    // 3. Launch the Loading Overlay
+    Swal.fire({
+        title: 'Analyzing Resumes',
+        html: `
+            <div class="swal-loading-content">
+                <p>Our AI is currently evaluating your candidates based on the job requirements.</p>
+                <small>Processing ${filesArray.length} file(s)...</small>
+            </div>
+        `,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+});
 
 });
